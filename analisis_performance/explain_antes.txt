@@ -1,0 +1,53 @@
+================================================================
+EXPLAIN ANALYZE ANTES DE INDICES
+================================================================
+
+ Nested Loop  (cost=15.87..36.99 rows=4 width=922) (actual time=0.022..0.024 rows=0.00 loops=1)
+    Output: c.nombre_cliente, c.email, v.fecha, v.total, v.metodo_pago, p.nombre_producto, dv.cantidad, dv.precio_unitario_historico
+    Inner Unique: true
+    Buffers: shared hit=1
+    ->  Nested Loop  (cost=15.72..36.28 rows=4 width=820) (actual time=0.022..0.023 rows=0.00 loops=1)
+          Output: v.fecha, v.total, v.metodo_pago, c.nombre_cliente, c.email, dv.cantidad, dv.precio_unitario_historico, dv.id_producto
+          Join Filter: (c.id_cliente = v.id_cliente)
+          Buffers: shared hit=1
+          ->  Seq Scan on public.clientes c  (cost=0.00..1.01 rows=1 width=650) (actual time=0.021..0.022 rows=0.00 loops=1)
+                Output: c.id_cliente, c.nombre_cliente, c.dni_cuit, c.telefono, c.direccion, c.email, c.id_membresia, c.fecha_creacion
+                Filter: (c.dni_cuit = 12345678)
+                Rows Removed by Filter: 1
+                Buffers: shared hit=1
+          ->  Hash Join  (cost=15.72..35.22 rows=4 width=202) (never executed)
+                Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, dv.cantidad, dv.precio_unitario_historico, dv.id_producto
+                Inner Unique: true
+                Hash Cond: (dv.id_venta = v.id_venta)
+                ->  Seq Scan on public.detalle_venta dv  (cost=0.00..17.50 rows=750 width=64) (never executed)
+                      Output: dv.id_detalle_venta, dv.cantidad, dv.precio_unitario_historico, dv.id_venta, dv.id_producto
+                ->  Hash  (cost=15.70..15.70 rows=2 width=170) (never executed)
+                      Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, v.id_venta
+                      ->  Seq Scan on public.ventas v  (cost=0.00..15.70 rows=2 width=170) (never executed)
+                            Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, v.id_venta
+                            Filter: ((v.fecha >= '2024-01-01'::date) AND (v.fecha <= '2024-12-31'::date))
+    ->  Index Scan using productos_pkey on public.productos p  (cost=0.14..0.18 rows=1 width=134) (never executed)
+          Output: p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto, p.precio_costo, p.precio_venta, p.stock_actual, p.stock_minimo, p.unidad_medida, p.id_proveedor
+          Index Cond: (p.id_producto = dv.id_producto)
+          Index Searches: 0
+  Query Identifier: 2065937549943200496
+  Planning:
+    Buffers: shared hit=299 dirtied=1
+  Planning Time: 2.251 ms
+  Execution Time: 0.094 ms
+
+
+================================================================
+ANÁLISIS DE NODOS (ANTES)
+================================================================
+
+Nodos Sequential Scan identificados:
+- detalle_venta: cost=0.00..17.50 (escanea 750 filas) - NODO MÁS COSTOSO
+- ventas: cost=0.00..15.70 (filtra por fecha) - SEGUNDO MÁS COSTOSO
+- clientes: cost=0.00..1.01 (filtra por dni_cuit)
+
+Nodos Index Scan identificados:
+- productos_pkey: cost=0.14..0.18 (nodo barato)
+
+Costo total del plan: 36.99
+Execution Time: 0.094 ms

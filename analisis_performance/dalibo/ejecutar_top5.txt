@@ -1,0 +1,42 @@
+================================================
+- link dalibo
+
+https://explain.dalibo.com/plan/86799416dh8ce67f
+================================================
+
+
+-- Top 5 Consultas por tiempo total
+SELECT 
+    left(query, 80) AS query_short,
+    calls,
+    total_exec_time::int AS total_time_ms,
+    mean_exec_time::numeric(10,3) AS avg_time_ms,
+    rows
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 5;
+Si necesitas forzar que tu consulta principal aparezca en el Top 5, ejecuta primero este bloque:
+-- Reiniciar estadísticas (opcional)
+SELECT pg_stat_statements_reset();
+-- Ejecutar la consulta 150 veces para registrarla
+DO $$
+DECLARE
+    i INTEGER;
+    rec RECORD;
+BEGIN
+    FOR i IN 1..150 LOOP
+        FOR rec IN 
+            SELECT 
+                c.nombre_cliente, c.email, v.fecha, v.total, v.metodo_pago,
+                p.nombre_producto, dv.cantidad, dv.precio_unitario_historico
+            FROM ventas v
+            JOIN clientes c ON c.id_cliente = v.id_cliente
+            JOIN detalle_venta dv ON dv.id_venta = v.id_venta
+            JOIN productos p ON p.id_producto = dv.id_producto
+            WHERE v.fecha BETWEEN '2024-01-01' AND '2024-12-31'
+              AND c.dni_cuit = 12345678
+        LOOP
+            NULL;
+        END LOOP;
+    END LOOP;
+END $$;

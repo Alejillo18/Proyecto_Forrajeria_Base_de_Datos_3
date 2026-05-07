@@ -1,0 +1,130 @@
+SET
+DROP INDEX
+DROP INDEX
+DROP INDEX
+DROP INDEX
+El despliegue de duraci¾n estß activado.
+========================================
+EXPLAIN ANALYZE ANTES DE INDICES
+========================================
+                                                                                    QUERY PLAN                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=15.87..36.99 rows=4 width=922) (actual time=0.022..0.024 rows=0.00 loops=1)
+   Output: c.nombre_cliente, c.email, v.fecha, v.total, v.metodo_pago, p.nombre_producto, dv.cantidad, dv.precio_unitario_historico
+   Inner Unique: true
+   Buffers: shared hit=1
+   ->  Nested Loop  (cost=15.72..36.28 rows=4 width=820) (actual time=0.022..0.023 rows=0.00 loops=1)
+         Output: v.fecha, v.total, v.metodo_pago, c.nombre_cliente, c.email, dv.cantidad, dv.precio_unitario_historico, dv.id_producto
+         Join Filter: (c.id_cliente = v.id_cliente)
+         Buffers: shared hit=1
+         ->  Seq Scan on public.clientes c  (cost=0.00..1.01 rows=1 width=650) (actual time=0.021..0.022 rows=0.00 loops=1)
+               Output: c.id_cliente, c.nombre_cliente, c.dni_cuit, c.telefono, c.direccion, c.email, c.id_membresia, c.fecha_creacion
+               Filter: (c.dni_cuit = 12345678)
+               Rows Removed by Filter: 1
+               Buffers: shared hit=1
+         ->  Hash Join  (cost=15.72..35.22 rows=4 width=202) (never executed)
+               Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, dv.cantidad, dv.precio_unitario_historico, dv.id_producto
+               Inner Unique: true
+               Hash Cond: (dv.id_venta = v.id_venta)
+               ->  Seq Scan on public.detalle_venta dv  (cost=0.00..17.50 rows=750 width=64) (never executed)
+                     Output: dv.id_detalle_venta, dv.cantidad, dv.precio_unitario_historico, dv.id_venta, dv.id_producto
+               ->  Hash  (cost=15.70..15.70 rows=2 width=170) (never executed)
+                     Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, v.id_venta
+                     ->  Seq Scan on public.ventas v  (cost=0.00..15.70 rows=2 width=170) (never executed)
+                           Output: v.fecha, v.total, v.metodo_pago, v.id_cliente, v.id_venta
+                           Filter: ((v.fecha >= '2024-01-01'::date) AND (v.fecha <= '2024-12-31'::date))
+   ->  Index Scan using productos_pkey on public.productos p  (cost=0.14..0.18 rows=1 width=134) (never executed)
+         Output: p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto, p.precio_costo, p.precio_venta, p.stock_actual, p.stock_minimo, p.unidad_medida, p.id_proveedor
+         Index Cond: (p.id_producto = dv.id_producto)
+         Index Searches: 0
+ Query Identifier: 2065937549943200496
+ Planning:
+   Buffers: shared hit=299 dirtied=1
+ Planning Time: 2.251 ms
+ Execution Time: 0.094 ms
+(33 filas)
+
+Duraci¾n: 3.128 ms
+========================================
+CREANDO INDICES...
+========================================
+CREATE INDEX
+Duraci¾n: 37.271 ms
+CREATE INDEX
+Duraci¾n: 1.745 ms
+CREATE INDEX
+Duraci¾n: 1.219 ms
+CREATE INDEX
+Duraci¾n: 1.147 ms
+========================================
+EXPLAIN ANALYZE DESPUES DE INDICES
+========================================
+                                                                                    QUERY PLAN                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=2.14..13.07 rows=4 width=922) (actual time=0.011..0.011 rows=0.00 loops=1)
+   Output: c.nombre_cliente, c.email, v.fecha, v.total, v.metodo_pago, p.nombre_producto, dv.cantidad, dv.precio_unitario_historico
+   Inner Unique: true
+   Buffers: shared hit=1
+   ->  Nested Loop  (cost=2.00..12.36 rows=4 width=820) (actual time=0.011..0.011 rows=0.00 loops=1)
+         Output: v.fecha, v.total, v.metodo_pago, c.nombre_cliente, c.email, dv.cantidad, dv.precio_unitario_historico, dv.id_producto
+         Buffers: shared hit=1
+         ->  Nested Loop  (cost=1.27..4.45 rows=2 width=788) (actual time=0.011..0.011 rows=0.00 loops=1)
+               Output: v.fecha, v.total, v.metodo_pago, v.id_venta, c.nombre_cliente, c.email
+               Join Filter: (c.id_cliente = v.id_cliente)
+               Buffers: shared hit=1
+               ->  Seq Scan on public.clientes c  (cost=0.00..1.01 rows=1 width=650) (actual time=0.010..0.010 rows=0.00 loops=1)
+                     Output: c.id_cliente, c.nombre_cliente, c.dni_cuit, c.telefono, c.direccion, c.email, c.id_membresia, c.fecha_creacion
+                     Filter: (c.dni_cuit = 12345678)
+                     Rows Removed by Filter: 1
+                     Buffers: shared hit=1
+               ->  Bitmap Heap Scan on public.ventas v  (cost=1.27..3.41 rows=2 width=170) (never executed)
+                     Output: v.id_venta, v.fecha, v.total, v.metodo_pago, v.id_cliente, v.id_vendedor
+                     Recheck Cond: ((v.fecha >= '2024-01-01'::date) AND (v.fecha <= '2024-12-31'::date))
+                     ->  Bitmap Index Scan on idx_ventas_fecha  (cost=0.00..1.27 rows=2 width=0) (never executed)
+                           Index Cond: ((v.fecha >= '2024-01-01'::date) AND (v.fecha <= '2024-12-31'::date))
+                           Index Searches: 0
+         ->  Bitmap Heap Scan on public.detalle_venta dv  (cost=0.73..3.92 rows=4 width=64) (never executed)
+               Output: dv.id_detalle_venta, dv.cantidad, dv.precio_unitario_historico, dv.id_venta, dv.id_producto
+               Recheck Cond: (v.id_venta = dv.id_venta)
+               ->  Bitmap Index Scan on idx_detalle_venta_id_venta  (cost=0.00..0.73 rows=4 width=0) (never executed)
+                     Index Cond: (dv.id_venta = v.id_venta)
+                     Index Searches: 0
+   ->  Index Scan using productos_pkey on public.productos p  (cost=0.14..0.18 rows=1 width=134) (never executed)
+         Output: p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto, p.precio_costo, p.precio_venta, p.stock_actual, p.stock_minimo, p.unidad_medida, p.id_proveedor
+         Index Cond: (p.id_producto = dv.id_producto)
+         Index Searches: 0
+ Query Identifier: 2065937549943200496
+ Planning:
+   Buffers: shared hit=99 read=4
+ Planning Time: 1.476 ms
+ Execution Time: 0.047 ms
+(37 filas)
+
+Duraci¾n: 1.865 ms
+========================================
+EJECUTANDO CONSULTA 100 VECES...
+========================================
+DO
+Duraci¾n: 34.026 ms
+========================================
+TOP 5 CONSULTAS MAS LENTAS/FRECUENTES
+========================================
+                          query_short                           | calls | total_time_ms | avg_time_ms | rows 
+----------------------------------------------------------------+-------+---------------+-------------+------
+ CREATE EXTENSION IF NOT EXISTS pg_stat_statements              |     2 |           295 |     147.335 |    0
+ CREATE INDEX idx_ventas_fecha ON ventas(fecha)                 |     1 |            35 |      34.684 |    0
+ DO $$                                                         +|     1 |            32 |      32.471 |    0
+ DECLARE                                                       +|       |               |             | 
+     i INTEGER;                                                +|       |               |             | 
+ BEGIN                                                         +|       |               |             | 
+     FOR i IN 1..100 LOOP                                      +|       |               |             | 
+         PERFORM                                               +|       |               |             | 
+                                                                |       |               |             | 
+ SELECT $1 || max(total_exec_time)::int FROM pg_stat_statements |     1 |            23 |      23.114 |    1
+ SELECT $1 AS mensaje, now() AS fecha_hora                      |     1 |             9 |       8.845 |    1
+(5 filas)
+
+Duraci¾n: 2.417 ms
+========================================
+ANALISIS COMPLETADO
+========================================

@@ -1,0 +1,9 @@
+-[ RECORD 1 ]----------------------------
+?column? | Total queries monitoreadas: 11
+
+-[ RECORD 1 ]-----------------------
+?column? | Query m s lenta (ms): 295
+
+-[ RECORD 1 ]-------------------------------
+?column? | Query con m s I/O (bloques): 4256
+
