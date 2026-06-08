@@ -23,3 +23,27 @@ Esta sección detalla el progreso de la implementación de la capa de persistenc
 ### 4. Buenas Prácticas Técnicas
 - [x] **Nomenclatura (Namespacing):** Utilizamos el estándar de separación con dos puntos (`:`) para las claves. *(Ejemplos: `clientes:page:1:limit:20` y `proveedores:page:1:limit:20`)*.
 - [x] **Asignación de TTL:** Toda clave guardada en Redis tiene un tiempo de vida (Time-To-Live) configurado (120 segundos).
+
+
+
+### Anexo:
+
+_Utilizamos plantillas de vista para manejo de front, con vistas_
+
+```
+endpoint: ..../
+
+```
+
+_.env:_
+
+```
+PORT=
+DB_USER=
+DB_HOST=
+DB_PASSWORD=
+DB_DATABASE=
+DB_PORT=
+REDIS_URL=
+
+```
