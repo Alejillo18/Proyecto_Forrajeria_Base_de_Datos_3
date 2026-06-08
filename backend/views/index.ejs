@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forrajería - Panel de Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+
+  <div class="max-w-4xl w-full bg-white p-8 rounded-lg shadow-md text-center">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">Sistema de Gestión - Forrajería</h1>
+    <p class="text-gray-600 mb-8">Administración general de la capa de persistencia políglota con optimización en caché</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <a href="/clientes" class="block p-6 bg-blue-50 border border-blue-200 rounded-lg shadow-sm hover:bg-blue-100 transition">
+        <h2 class="text-xl font-bold text-blue-800 mb-2">Módulo de Clientes</h2>
+        <p class="text-sm text-gray-600">Visualización de clientes registrados, paginación dinámica e integración con almacenamiento en memoria</p>
+      </a>
+
+      <a href="/proveedores" class="block p-6 bg-green-50 border border-green-200 rounded-lg shadow-sm hover:bg-green-100 transition">
+        <h2 class="text-xl font-bold text-green-800 mb-2">Módulo de Proveedores</h2>
+        <p class="text-sm text-gray-600">Control de proveedores activos, datos de contacto de empresas y validación de velocidad en lecturas</p>
+      </a>
+
+    </div>
+  </div>
+
+</body>
+</html>
