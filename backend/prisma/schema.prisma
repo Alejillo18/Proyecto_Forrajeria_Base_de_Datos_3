@@ -1,0 +1,110 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Membresia {
+  id_membresia        String    @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  nombre_membresia    String    @db.VarChar(50)
+  descuento_porcentaje Decimal?  @default(0) @db.Decimal(5, 2)
+  puntos_minimos      Int
+  clientes            Cliente[]
+
+  @@map("membresias")
+}
+
+model Proveedor {
+  id_proveedor    String     @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  cuit            BigInt
+  nombre_empresa  String     @db.VarChar(50)
+  contacto_nombre String?    @db.VarChar(50)
+  telefono        BigInt?
+  activo          Boolean?   @default(true)
+  productos       Producto[]
+
+  @@map("proveedores")
+}
+
+model Vendedor {
+  id_vendedor         String   @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  nombre_vendedor     String   @db.VarChar(50)
+  comision_porcentaje Decimal? @default(0) @db.Decimal(5, 2)
+  activo              Boolean? @default(true)
+  ventas              Venta[]
+
+  @@map("vendedores")
+}
+
+model Cliente {
+  id_cliente     String     @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  nombre_cliente String     @db.VarChar(50)
+  dni_cuit       BigInt
+  telefono       BigInt?
+  direccion      String?    @db.VarChar(50)
+  email          String?    @db.VarChar(256)
+  id_membresia   String?    @db.Uuid
+  activo         Boolean?   @default(true)
+  fecha_creacion DateTime?  @default(now()) @db.Date
+  membresia      Membresia? @relation(fields: [id_membresia], references: [id_membresia], onDelete: Cascade, onUpdate: NoAction, map: "fk_membresia")
+  ventas         Venta[]
+
+  @@map("clientes")
+}
+
+model Venta {
+  id_venta       String         @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  fecha          DateTime?      @default(now()) @db.Date
+  total          Decimal        @db.Decimal(12, 2)
+  metodo_pago    String?        @default("Efectivo") @db.VarChar(50)
+  id_cliente     String?        @default("00000000-0000-0000-0000-000000000000") @db.Uuid
+  id_vendedor    String?        @default("00000000-0000-0000-0000-000000000000") @db.Uuid
+  cliente        Cliente?       @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade, onUpdate: NoAction, map: "fk_cliente")
+  vendedor       Vendedor?      @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: Cascade, onUpdate: NoAction, map: "fk_vendedor")
+  detalles       DetalleVenta[]
+  envios         Envio[]
+
+  @@map("ventas")
+}
+
+model Producto {
+  id_producto         String         @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  sku                 String         @unique @db.VarChar(50)
+  nombre_producto     String         @db.VarChar(50)
+  descripcion_producto String?        @db.Text
+  precio_costo        Decimal?       @db.Decimal(12, 2)
+  precio_venta        Decimal?       @db.Decimal(12, 2)
+  stock_actual        Decimal?       @default(0) @db.Decimal(12, 2)
+  stock_minimo        Decimal?       @default(0) @db.Decimal(12, 2)
+  unidad_medida       String?        @db.VarChar(15)
+  id_proveedor        String?        @db.Uuid
+  proveedor           Proveedor?     @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: Cascade, onUpdate: NoAction, map: "fk_proveedor")
+  detalles            DetalleVenta[]
+
+  @@map("productos")
+}
+
+model Envio {
+  id_envio          String   @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  direccion_entrega String?  @db.VarChar(50)
+  estado            String?  @default("Pendiente") @db.VarChar(20)
+  fecha_envio       DateTime @db.Date
+  id_venta          String?  @db.Uuid
+  venta             Venta?   @relation(fields: [id_venta], references: [id_venta], onDelete: Cascade, onUpdate: NoAction, map: "fk_venta")
+
+  @@map("envios")
+}
+
+model DetalleVenta {
+  id_detalle_venta          String   @id @default(dbgenerated("generate_uuidv7()")) @db.Uuid
+  cantidad                  Decimal  @db.Decimal(12, 2)
+  precio_unitario_historico Decimal  @db.Decimal(12, 2)
+  id_venta                  String?  @db.Uuid
+  id_producto               String?  @db.Uuid
+  venta                     Venta?   @relation(fields: [id_venta], references: [id_venta], onDelete: Cascade, onUpdate: NoAction, map: "fk_venta")
+  producto                  Producto? @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction, map: "fk_producto")
+
+  @@map("detalle_venta")
+}
