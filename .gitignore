@@ -1,31 +1,25 @@
-# Dependencias en cualquier subcarpeta
+
 **/node_modules/
 **/dist/
 **/.angular/
 **/out/
 
-# Variables de entorno en cualquier subcarpeta
 **/.env
 **/.env.*
 **/*.pem
 **/*.key
 
-# Archivos del Sistema Operativo
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Configuraciones de editores
 .vscode/
 .idea/
 *.swp
 
-# Logs y Datos Temporales
 *.log
 .npm
 .eslintcache
-
-# Datos locales de Docker/Bases de datos en la raíz
 /data/
 .mongo-data/
 .postgres-data/
