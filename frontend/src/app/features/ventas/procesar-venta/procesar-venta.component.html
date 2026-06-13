@@ -1,0 +1,106 @@
+<div class="space-y-6">
+
+    <div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Mostrador de Ventas</h1>
+      <p class="text-sm text-slate-400">Registrar salida de mercadería suelta o bolsas cerradas.</p>
+    </div>
+  
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+        <h2 class="text-base font-bold text-white border-b border-slate-800 pb-2">Agregar Producto</h2>
+  
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Producto</label>
+          <select [(ngModel)]="idProductoSeleccionado" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer">
+            <option *ngFor="let p of productos" [value]="p.id">
+              {{ p.nombre }}
+            </option>
+          </select>
+        </div>
+  
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Venta</label>
+          <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button (click)="tipoVenta = 'Kilo'" 
+                    [ngClass]="{'bg-slate-800 text-emerald-400 border-slate-700': tipoVenta === 'Kilo', 'text-slate-400 border-transparent': tipoVenta !== 'Kilo'}"
+                    class="py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer">
+              Por Kilo (Suelto)
+            </button>
+            <button (click)="tipoVenta = 'Bolsa'" 
+                    [ngClass]="{'bg-slate-800 text-emerald-400 border-slate-700': tipoVenta === 'Bolsa', 'text-slate-400 border-transparent': tipoVenta !== 'Bolsa'}"
+                    class="py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer">
+              Bolsa Cerrada
+            </button>
+          </div>
+        </div>
+  
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Cantidad</label>
+          <div class="relative">
+            <input type="number" 
+                   [(ngModel)]="cantidadAAgregar" 
+                   min="0.1" 
+                   step="any"
+                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+            <span class="absolute right-4 top-3.5 text-xs text-slate-500 font-medium">
+              {{ tipoVenta === 'Bolsa' ? 'uds.' : 'kg.' }}
+            </span>
+          </div>
+        </div>
+  
+        <button (click)="agregarAlCarrito()" class="w-full py-3 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">
+          Agregar a la Lista
+        </button>
+      </div>
+  
+      <div class="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden min-h-[400px] justify-between">
+        
+        <div>
+          <div class="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+            <h2 class="text-base font-bold text-white">Detalle de Salida actual</h2>
+            <span class="text-xs font-medium text-slate-400">{{ carrito.length }} items listados</span>
+          </div>
+  
+          <div *ngIf="carrito.length === 0" class="flex flex-col items-center justify-center p-12 text-center space-y-2">
+            <div class="h-12 w-12 rounded-full bg-slate-950 flex items-center justify-center border border-slate-800">
+              <span class="text-slate-600 text-xl font-bold">🛒</span>
+            </div>
+            <p class="text-sm font-medium text-slate-400">No hay productos cargados en esta venta.</p>
+          </div>
+  
+          <div class="divide-y divide-slate-800 max-h-[320px] overflow-y-auto" *ngIf="carrito.length > 0">
+            <div *ngFor="let item of carrito; let i = index" class="p-4 flex items-center justify-between hover:bg-slate-800/20 transition-colors">
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-white">{{ item.producto.nombre }}</p>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400 font-medium">{{ item.tipo }}</span>
+                  <span class="text-slate-500">Cantidad: {{ item.cantidad }} x {{ (item.tipo === 'Bolsa' ? item.producto.precioBolsa : item.producto.precioKilo) | currency:'ARS':'$':'1.0-0' }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-bold text-emerald-400">{{ item.subtotal | currency:'ARS':'$':'1.0-0' }}</span>
+                <button (click)="eliminarItem(i)" class="text-slate-500 hover:text-rose-400 text-base p-1 transition-colors cursor-pointer">&times;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <div class="p-6 border-t border-slate-800 bg-slate-950/40 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 uppercase tracking-wider font-bold block">Total a Cobrar</span>
+            <span class="text-2xl font-black text-white tracking-tight">{{ totalVenta | currency:'ARS':'$':'1.0-0' }}</span>
+          </div>
+          <button (click)="confirmarVenta()" 
+                  [disabled]="carrito.length === 0"
+                  class="px-6 py-3 text-sm font-bold rounded-xl shadow-xl transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  [ngClass]="{'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-emerald-500/5': carrito.length > 0, 'bg-slate-800 text-slate-500 shadow-none': carrito.length === 0}">
+            Finalizar Registro
+          </button>
+        </div>
+  
+      </div>
+  
+    </div>
+  
+  </div>

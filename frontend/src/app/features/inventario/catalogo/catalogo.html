@@ -1,0 +1,185 @@
+<div class="space-y-6">
+  
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Catálogo de Inventario</h1>
+      <p class="text-sm text-slate-400">Control de bolsas cerradas y fraccionamiento por kilo.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button (click)="abrirModalNuevoProducto()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer">
+        <span>Nuevo Producto</span>
+      </button>
+      <button (click)="abrirModalCargarStock()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">
+        <span>+ Cargar Stock</span>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="productosCriticos.length > 0" class="space-y-3 animate-in fade-in duration-200">
+    <h3 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+      ⚠️ Alertas de Reposición Urgente
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngFor="let crit of productosCriticos" class="bg-rose-950/20 border border-rose-900/40 rounded-xl p-4 flex items-center justify-between">
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-white">{{ crit.nombre }}</p>
+          <p class="text-xs text-rose-300/80">Stock mínimo configurado: {{ crit.stockMinimoBolsas }} u.</p>
+        </div>
+        <div class="text-right">
+          <span class="block text-lg font-black text-rose-400">{{ crit.stockBolsas }} u.</span>
+          <span class="text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md block mt-1">Crítico</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-800 bg-slate-900/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <th class="p-4">Producto</th>
+          <th class="p-4">Categoría</th>
+          <th class="p-4 text-center">Bolsas Cerradas</th>
+          <th class="p-4 text-center">Peso Bolsa</th>
+          <th class="p-4 text-center">Stock Suelto (Kilos)</th>
+          <th class="p-4 text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800 text-sm text-slate-300">
+        <tr *ngFor="let prod of productos" class="hover:bg-slate-800/30 transition-colors">
+          <td class="p-4 font-medium text-white">{{ prod.nombre }}</td>
+          <td class="p-4"><span class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">{{ prod.categoria }}</span></td>
+          <td class="p-4 text-center">
+            <span [ngClass]="{'text-rose-400 font-bold': prod.stockBolsas <= prod.stockMinimoBolsas, 'text-emerald-400': prod.stockBolsas > prod.stockMinimoBolsas}">
+              {{ prod.stockBolsas }} u.
+            </span>
+          </td>
+          <td class="p-4 text-center text-slate-400">{{ prod.pesoPorBolsaKg }} kg</td>
+          <td class="p-4 text-center text-amber-400 font-medium">{{ prod.stockKilosSueltos | number:'1.1-2' }} kg</td>
+          <td class="p-4 text-center">
+            <button (click)="abrirModalFraccionamiento(prod)" class="px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20 rounded-xl transition-all cursor-pointer">
+              Fraccionar Bolsa
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="mostrarModalFraccionar" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <h3 class="text-lg font-bold text-white">Procesar Fraccionamiento</h3>
+        <button (click)="cerrarModales()" class="text-slate-400 hover:text-white transition-colors cursor-pointer text-xl">&times;</button>
+      </div>
+      <div class="space-y-4" *ngIf="productoSeleccionado">
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Producto Seleccionado</label>
+          <p class="text-sm font-medium text-white mt-1">{{ productoSeleccionado.nombre }}</p>
+          <p class="text-xs text-slate-400 mt-0.5">Cada bolsa rinde: {{ productoSeleccionado.pesoPorBolsaKg }} kg</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
+          <div>
+            <span class="text-xs text-slate-500 block">Bolsas actuales</span>
+            <span class="text-sm font-semibold text-slate-300">{{ productoSeleccionado.stockBolsas }} u.</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-500 block">Suelto actual</span>
+            <span class="text-sm font-semibold text-amber-400">{{ productoSeleccionado.stockKilosSueltos }} kg</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">¿Cuántas bolsas vas a abrir?</label>
+          <input type="number" [(ngModel)]="cantidadBolsasAFraccionar" min="1" [max]="productoSeleccionado.stockBolsas" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+        </div>
+        <div class="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl text-center">
+          <p class="text-xs text-slate-400">Se van a generar e incorporar automáticamente:</p>
+          <p class="text-lg font-bold text-emerald-400 mt-0.5">+ {{ (cantidadBolsasAFraccionar * productoSeleccionado.pesoPorBolsaKg) || 0 }} Kilos Sueltos</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 mt-6">
+        <button (click)="cerrarModales()" class="flex-1 px-4 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer">Cancelar</button>
+        <button (click)="ejecutarFraccionamiento()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="mostrarModalCargarStock" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <h3 class="text-lg font-bold text-white">Ingreso de Mercadería</h3>
+        <button (click)="cerrarModales()" class="text-slate-400 hover:text-white transition-colors cursor-pointer text-xl">&times;</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Seleccionar Producto</label>
+          <select [(ngModel)]="idProductoACargar" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors pointer-events-auto">
+            <option *ngFor="let p of productos" [value]="p.id">{{ p.nombre }} ({{ p.pesoPorBolsaKg }}kg)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Cantidad de Bolsas Recibidas</label>
+          <input type="number" [(ngModel)]="cantidadBolsasACargar" min="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+        </div>
+      </div>
+      <div class="flex items-center gap-3 mt-6">
+        <button (click)="cerrarModales()" class="flex-1 px-4 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer">Cancelar</button>
+        <button (click)="ejecutarCargaStock()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">Ingresar Bolsas</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="mostrarModalNuevoProducto" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <h3 class="text-lg font-bold text-white">Alta de Nuevo Producto</h3>
+        <button (click)="cerrarModales()" class="text-slate-400 hover:text-white transition-colors cursor-pointer text-xl">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nombre del Alimento</label>
+          <input type="text" [(ngModel)]="nuevoProducto.nombre" placeholder="Ej. Alimento Cachorro Raza Pequeña" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Categoría</label>
+            <select [(ngModel)]="nuevoProducto.categoria" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer">
+              <option value="Caninos">Caninos</option>
+              <option value="Felinos">Felinos</option>
+              <option value="Aves">Aves</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Peso por Bolsa</label>
+            <div class="relative">
+              <input type="number" [(ngModel)]="nuevoProducto.pesoPorBolsaKg" min="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+              <span class="absolute right-3 top-2 text-xs text-slate-500">kg</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Stock Inicial</label>
+            <input type="number" [(ngModel)]="nuevoProducto.stockBolsas" min="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Stock Mínimo</label>
+            <input type="number" [(ngModel)]="nuevoProducto.stockMinimoBolsas" min="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500 transition-colors">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 mt-6">
+        <button (click)="cerrarModales()" class="flex-1 px-4 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer">Cancelar</button>
+        <button (click)="ejecutarCrearProducto()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">Crear Producto</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
