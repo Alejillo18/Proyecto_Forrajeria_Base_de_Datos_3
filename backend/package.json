@@ -6,10 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test src/modules/**/*.test.js",
-    "prisma": {
-      "seed": "node prisma/seed.js"
-    }
+    "test": "node --test src/modules/**/*.test.js"
   },
   "keywords": [],
   "author": "",
