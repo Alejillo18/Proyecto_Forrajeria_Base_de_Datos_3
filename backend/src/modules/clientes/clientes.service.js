@@ -68,7 +68,6 @@ export const ClientesService = {
     return clienteEliminado;
   },
 
-  // --- Caso de Uso: Control de Cuenta Corriente (HU-13) ---
   async obtenerDetalleCuentaCorriente(id_cliente) {
     const cliente = await ClientesDAO.selectById(id_cliente);
     if (!cliente) {
@@ -85,7 +84,7 @@ export const ClientesService = {
     return {
       id_cliente: cliente.id_cliente,
       nombre_cliente: cliente.nombre_cliente,
-      dni_cuit: cliente.dni_cuit.toString(), // Mapeo preventivo para BigInt
+      dni_cuit: cliente.dni_cuit.toString(),
       saldo_deudor,
       historial
     };

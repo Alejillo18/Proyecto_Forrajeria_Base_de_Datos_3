@@ -1,0 +1,15 @@
+<div style="display: flex; min-height: 100vh;">
+    <aside style="width: 250px; background-color: #0b132b; padding: 20px;">
+      <h2 style="color: #00ebc7; font-family: sans-serif; margin-bottom: 30px;">FORRAJERÍA</h2>
+      
+      <nav style="display: flex; flex-direction: column; gap: 15px;">
+        <a routerLink="/inventario" style="color: white; text-decoration: none; padding: 10px; border-radius: 4px;">📦 Inventario / Catálogo</a>
+        <a routerLink="/ventas" style="color: white; text-decoration: none; padding: 10px; border-radius: 4px;">💰 Mostrador de Ventas</a>
+        <a routerLink="/vendedores" style="color: white; text-decoration: none; padding: 10px; border-radius: 4px;">👥 Comisionistas</a>
+      </nav>
+    </aside>
+  
+    <main style="flex: 1; padding: 30px; background-color: #0f172a;">
+      <router-outlet></router-outlet>
+    </main>
+  </div>

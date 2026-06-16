@@ -1,18 +1,11 @@
-import { prisma } from '../../../config/db.prisma.js';
+import { pool } from '../../../config/db.pg.js';
 
 export const AuthDAO = {
   async selectByEmail(email) {
-    return await prisma.usuario.findFirst({
-      where: {
-        email,
-      },
-      select: {
-        id_usuario: true,
-        email: true,
-        password: true,
-        rol: true,
-        activo: true,
-      },
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM usuarios WHERE email = $1`,
+      [email]
+    );
+    return rows[0] || null;
   },
 };

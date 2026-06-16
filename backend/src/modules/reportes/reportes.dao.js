@@ -1,120 +1,103 @@
-import { prisma } from '../../../config/db.prisma.js';
+import { pool } from '../../../config/db.pg.js';
 
 export const ReportesDAO = {
   async obtenerMetricasFinancieras() {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
+    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
     const [ventasHoy, ventasMes, metodosPago] = await Promise.all([
-      prisma.venta.aggregate({
-        _sum: { total: true },
-        _count: { id_venta: true },
-        where: { fecha: { gte: hoy } }
-      }),
-      prisma.venta.aggregate({
-        _sum: { total: true },
-        where: {
-          fecha: {
-            gte: new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-          }
-        }
-      }),
-      prisma.venta.groupBy({
-        by: ['metodo_pago'],
-        _sum: { total: true },
-        _count: { id_venta: true }
-      })
+      pool.query(
+        `SELECT COALESCE(SUM(total), 0) AS total, COUNT(id_venta) AS cantidad
+         FROM ventas WHERE fecha >= $1`,
+        [hoy]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(total), 0) AS total
+         FROM ventas WHERE fecha >= $1`,
+        [inicioMes]
+      ),
+      pool.query(
+        `SELECT metodo_pago, COALESCE(SUM(total), 0) AS total, COUNT(id_venta) AS cantidad
+         FROM ventas
+         GROUP BY metodo_pago`
+      ),
     ]);
 
     return {
-      facturacion_hoy: Number(ventasHoy._sum.total || 0),
-      amount_sales_today: ventasHoy._count.id_venta,
-      cantidad_ventas_hoy: ventasHoy._count.id_venta,
-      facturacion_mes: Number(ventasMes._sum.total || 0),
-      metodos_pago: metodosPago.map(m => ({
+      facturacion_hoy: Number(ventasHoy.rows[0].total),
+      amount_sales_today: Number(ventasHoy.rows[0].cantidad),
+      cantidad_ventas_hoy: Number(ventasHoy.rows[0].cantidad),
+      facturacion_mes: Number(ventasMes.rows[0].total),
+      metodos_pago: metodosPago.rows.map(m => ({
         metodo: m.metodo_pago,
-        total: Number(m._sum.total || 0),
-        cantidad: m._count.id_venta
-      }))
+        total: Number(m.total),
+        cantidad: Number(m.cantidad),
+      })),
     };
   },
 
   async obtenerTopVendedores() {
-    const ranking = await prisma.venta.groupBy({
-      by: ['id_vendedor'],
-      _sum: { total: true },
-      _count: { id_venta: true },
-      orderBy: { _sum: { total: 'desc' } },
-      take: 5
-    });
-
-    const vendedoresIds = ranking.map(r => r.id_vendedor).filter(Boolean);
-
-    const vendedoresInfo = await prisma.vendedor.findMany({
-      where: { id_vendedor: { in: vendedoresIds } },
-      select: { id_vendedor: true, nombre_vendedor: true }
-    });
-
-    return ranking.map(r => {
-      const info = vendedoresInfo.find(v => v.id_vendedor === r.id_vendedor);
-      return {
-        id_vendedor: r.id_vendedor,
-        nombre: info ? info.nombre_vendedor : 'Mostrador / Anonimo',
-        total_vendido: Number(r._sum.total || 0),
-        cantidad_ventas: r._count.id_venta
-      };
-    });
+    const { rows } = await pool.query(
+      `SELECT v.id_vendedor,
+              COALESCE(ve.nombre_vendedor, 'Mostrador / Anonimo') AS nombre,
+              COALESCE(SUM(v.total), 0) AS total_vendido,
+              COUNT(v.id_venta) AS cantidad_ventas
+       FROM ventas v
+       LEFT JOIN vendedores ve ON ve.id_vendedor = v.id_vendedor
+       GROUP BY v.id_vendedor, ve.nombre_vendedor
+       ORDER BY total_vendido DESC
+       LIMIT 5`
+    );
+    return rows.map(r => ({
+      id_vendedor: r.id_vendedor,
+      nombre: r.nombre,
+      total_vendido: Number(r.total_vendido),
+      cantidad_ventas: Number(r.cantidad_ventas),
+    }));
   },
 
   async obtenerDeudoresCriticos() {
-
-    const ventasDeudores = await prisma.venta.groupBy({
-      by: ['id_cliente'],
-      _sum: { total: true },
-      where: { metodo_pago: 'Cuenta Corriente' },
-      orderBy: { _sum: { total: 'desc' } },
-      take: 5
-    });
-
-    const clientesIds = ventasDeudores.map(d => d.id_cliente).filter(Boolean);
-
-    const infoClientes = await prisma.cliente.findMany({
-      where: { id_cliente: { in: clientesIds } },
-      select: { id_cliente: true, nombre_cliente: true, telefono: true }
-    });
-
-    return ventasDeudores.map(d => {
-      const info = infoClientes.find(c => c.id_cliente === d.id_cliente);
-      return {
-        id_cliente: d.id_cliente,
-        nombre_cliente: info ? info.nombre_cliente : 'Cliente No Identificado',
-        telefono: info ? info.telefono : 'N/A',
-        saldo_deudor: Number(d._sum.total || 0)
-      };
-    });
+    const { rows } = await pool.query(
+      `SELECT v.id_cliente,
+              COALESCE(c.nombre_cliente, 'Cliente No Identificado') AS nombre_cliente,
+              COALESCE(c.telefono::text, 'N/A') AS telefono,
+              COALESCE(SUM(v.total), 0) AS saldo_deudor
+       FROM ventas v
+       LEFT JOIN clientes c ON c.id_cliente = v.id_cliente
+       WHERE v.metodo_pago = 'Cuenta Corriente'
+       GROUP BY v.id_cliente, c.nombre_cliente, c.telefono
+       ORDER BY saldo_deudor DESC
+       LIMIT 5`
+    );
+    return rows.map(r => ({
+      id_cliente: r.id_cliente,
+      nombre_cliente: r.nombre_cliente,
+      telefono: r.telefono,
+      saldo_deudor: Number(r.saldo_deudor),
+    }));
   },
 
   async obtenerComisionesDistribuidoresResumen() {
-
-    const agrupacionRepartidores = await prisma.venta.groupBy({
-      by: ['id_usuario'],
-      _sum: { total: true },
-      _count: { id_venta: true },
-      where: {
-        comision_liquidada: false,
-        envio: { estado: 'Entregado' }
-      },
-      orderBy: { _sum: { total: 'desc' } }
-    });
-
-    return agrupacionRepartidores.map(r => {
-      const totalAcumulado = Number(r._sum.total || 0);
+    const { rows } = await pool.query(
+      `SELECT v.id_usuario,
+              COUNT(v.id_venta) AS entregas_pendientes_pago,
+              COALESCE(SUM(v.total), 0) AS total_distribuido
+       FROM ventas v
+       JOIN envios e ON e.id_venta = v.id_venta
+       WHERE v.comision_liquidada = false
+         AND e.estado = 'Entregado'
+       GROUP BY v.id_usuario
+       ORDER BY total_distribuido DESC`
+    );
+    return rows.map(r => {
+      const totalAcumulado = Number(r.total_distribuido);
       return {
         id_usuario: r.id_usuario,
-        entregas_pendientes_pago: r._count.id_venta,
+        entregas_pendientes_pago: Number(r.entregas_pendientes_pago),
         total_distribuido: totalAcumulado,
-        comision_pendiente: Math.round((totalAcumulado * 0.10) * 100) / 100
+        comision_pendiente: Math.round(totalAcumulado * 0.10 * 100) / 100,
       };
     });
-  }
+  },
 };

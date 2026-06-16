@@ -1,114 +1,74 @@
-import { prisma } from '../../../config/db.prisma.js';
+import { pool } from '../../../config/db.pg.js';
 
 export const ClientesDAO = {
   async selectAll({ limit, offset }) {
-    return await prisma.cliente.findMany({
-      where: {
-        activo: true,
-      },
-      select: {
-        id_cliente: true,
-        nombre_cliente: true,
-        dni_cuit: true,
-        telefono: true,
-        direccion: true,
-        email: true,
-        id_membresia: true,
-        fecha_creacion: true,
-      },
-      orderBy: [
-        { fecha_creacion: 'desc' },
-        { id_cliente: 'desc' },
-      ],
-      take: limit,
-      skip: offset,
-    });
+    const { rows } = await pool.query(
+      `SELECT id_cliente, nombre_cliente, dni_cuit, telefono, direccion, email, id_membresia, fecha_creacion
+       FROM clientes
+       WHERE activo = true
+       ORDER BY fecha_creacion DESC, id_cliente DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return rows;
   },
 
   async selectById(id) {
-    return await prisma.cliente.findFirst({
-      where: {
-        id_cliente: id,
-        activo: true,
-      },
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM clientes WHERE id_cliente = $1 AND activo = true`,
+      [id]
+    );
+    return rows[0] || null;
   },
 
   async insert({ nombre_cliente, dni_cuit, telefono, direccion, email, id_membresia }) {
-    return await prisma.cliente.create({
-      data: {
-        nombre_cliente,
-        dni_cuit,
-        telefono: telefono || null,
-        direccion: direccion || null,
-        email: email || null,
-        id_membresia: id_membresia || null,
-      },
-    });
+    const { rows } = await pool.query(
+      `INSERT INTO clientes (nombre_cliente, dni_cuit, telefono, direccion, email, id_membresia)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [nombre_cliente, dni_cuit, telefono || null, direccion || null, email || null, id_membresia || null]
+    );
+    return rows[0];
   },
 
   async update(id, { nombre_cliente, dni_cuit, telefono, direccion, email, id_membresia }) {
-    return await prisma.cliente.update({
-      where: {
-        id_cliente: id,
-      },
-      data: {
-        nombre_cliente,
-        dni_cuit,
-        telefono: telefono || null,
-        direccion: direccion || null,
-        email: email || null,
-        id_membresia: id_membresia || null,
-      },
-    });
+    const { rows } = await pool.query(
+      `UPDATE clientes
+       SET nombre_cliente = $1, dni_cuit = $2, telefono = $3, direccion = $4, email = $5, id_membresia = $6
+       WHERE id_cliente = $7
+       RETURNING *`,
+      [nombre_cliente, dni_cuit, telefono || null, direccion || null, email || null, id_membresia || null, id]
+    );
+    return rows[0];
   },
 
   async deleteSoft(id) {
-    return await prisma.cliente.update({
-      where: {
-        id_cliente: id,
-      },
-      data: {
-        activo: false,
-      },
-      select: {
-        id_cliente: true,
-        nombre_cliente: true,
-        activo: true,
-      },
-    });
+    const { rows } = await pool.query(
+      `UPDATE clientes SET activo = false WHERE id_cliente = $1
+       RETURNING id_cliente, nombre_cliente, activo`,
+      [id]
+    );
+    return rows[0];
   },
 
-  // --- Métodos Nuevos para Cuenta Corriente (HU-13) ---
-
   async obtenerSaldoDeudor(id_cliente) {
-    const agregacion = await prisma.venta.aggregate({
-      _sum: {
-        total: true
-      },
-      where: {
-        id_cliente,
-        metodo_pago: 'Cuenta Corriente'
-      }
-    });
-    return Number(agregacion._sum.total || 0);
+    const { rows } = await pool.query(
+      `SELECT COALESCE(SUM(total), 0) AS total
+       FROM ventas
+       WHERE id_cliente = $1 AND metodo_pago = 'Cuenta Corriente'`,
+      [id_cliente]
+    );
+    return Number(rows[0].total);
   },
 
   async selectHistorialCuentaCorriente(id_cliente) {
-    return await prisma.venta.findMany({
-      where: {
-        id_cliente,
-        metodo_pago: 'Cuenta Corriente'
-      },
-      select: {
-        id_venta: true,
-        fecha: true,
-        total: true,
-        metodo_pago: true
-      },
-      orderBy: {
-        fecha: 'desc'
-      }
-    });
-  }
+    const { rows } = await pool.query(
+      `SELECT id_venta, fecha, total, metodo_pago
+       FROM ventas
+       WHERE id_cliente = $1 AND metodo_pago = 'Cuenta Corriente'
+       ORDER BY fecha DESC`,
+      [id_cliente]
+    );
+    return rows;
+  },
 };

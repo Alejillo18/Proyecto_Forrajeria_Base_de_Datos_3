@@ -3,7 +3,7 @@ import { TurnosService } from './turnos.service.js';
 export const TurnosController = {
   async verificarActivo(req, res, next) {
     try {
-      const id_usuario = parseInt(req.query.id_usuario);
+      const id_usuario = req.query.id_usuario;
       if (!id_usuario) return res.status(400).json({ message: 'Falta id_usuario' });
 
       const turno = await TurnosService.getActivo(id_usuario);
