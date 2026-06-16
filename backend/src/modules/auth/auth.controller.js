@@ -13,5 +13,14 @@ export const AuthController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async logout(req, res, next) {
+    try {
+
+      res.json({ message: 'Sesión cerrada exitosamente' });
+    } catch (error) {
+      next(error);
+    }
   }
 };
