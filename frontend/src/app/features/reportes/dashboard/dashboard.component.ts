@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { AuthService } from '../../../core/services/auth';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,6 +14,7 @@ import { AuthService } from '../../../core/services/auth';
 })
 export class DashboardComponent implements OnInit {
   public authService: AuthService = inject(AuthService);
+  private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
 
   public chartOptions: any;
@@ -30,13 +32,14 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.inicializarGrafico();
+    this.cargarDatosDashboard();
   }
 
   private inicializarGrafico(): void {
     this.chartOptions = {
       series: [{
         name: "Ventas Diarias ($)",
-        data: []
+        data: [0, 0, 0, 0, 0, 0, 0]
       }],
       chart: {
         height: 320,
@@ -71,6 +74,31 @@ export class DashboardComponent implements OnInit {
     };
   }
 
+  private cargarDatosDashboard(): void {
+    this.http.get('http://localhost:3000/api/reportes/dashboard').subscribe({
+      next: (data: any) => {
+        this.totalVentasMes = data.totalVentasMes || 0;
+        this.totalFiadoAcumulado = data.totalFiadoAcumulado || 0;
+        this.productosBajoStock = data.productosBajoStock || 0;
+        this.stockCritico = data.stockCritico || [];
+        this.deudoresRecientes = data.deudoresRecientes || [];
+
+        if (data.ventasDiarias && data.ventasDiarias.length > 0) {
+          this.chartOptions.series = [{
+            name: "Ventas Diarias ($)",
+            data: data.ventasDiarias
+          }];
+        }
+        
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.mensajeError = 'No se pudieron cargar las metricas del panel gerencial.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   public crearUsuario(): void {
     this.mensajeExito = '';
     this.mensajeError = '';
@@ -93,7 +121,6 @@ export class DashboardComponent implements OnInit {
         this.nuevoEmail = '';
         this.nuevoPassword = '';
         this.nuevoRol = 'Empleado';
-
         this.cdr.detectChanges();
       },
       error: (err: any) => {
