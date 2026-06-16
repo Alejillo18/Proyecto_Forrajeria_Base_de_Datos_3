@@ -12,4 +12,4 @@ router.post('/', verifyToken, checkRole(['Administrador', 'Vendedor_Mostrador'])
 router.put('/:id', verifyToken, checkRole(['Administrador']), ClientesController.update);
 router.delete('/:id', verifyToken, checkRole(['Administrador']), ClientesController.delete);
 
-export default router;  
+export default router;

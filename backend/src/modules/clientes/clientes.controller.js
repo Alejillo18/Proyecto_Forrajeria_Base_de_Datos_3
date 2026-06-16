@@ -39,7 +39,16 @@ export const ClientesController = {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const clienteActualizado = await ClientesService.update(id, req.body);
+      const { nombre_cliente, dni_cuit, telefono, direccion, email } = req.body;
+
+      const camposParaActualizar = {};
+      if (nombre_cliente !== undefined) camposParaActualizar.nombre_cliente = nombre_cliente;
+      if (dni_cuit !== undefined) camposParaActualizar.dni_cuit = dni_cuit;
+      if (telefono !== undefined) camposParaActualizar.telefono = telefono;
+      if (direccion !== undefined) camposParaActualizar.direccion = direccion;
+      if (email !== undefined) camposParaActualizar.email = email;
+
+      const clienteActualizado = await ClientesService.update(id, camposParaActualizar);
       
       if (!clienteActualizado) {
         return res.status(404).json({ message: 'Cliente no encontrado o inactivo para actualizar' });

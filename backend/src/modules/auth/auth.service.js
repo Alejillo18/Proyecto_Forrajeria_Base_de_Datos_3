@@ -20,9 +20,11 @@ export const AuthService = {
       throw error;
     }
 
+    const secretKey = process.env.JWT_SECRET || 'clave_secreta_de_emergencia_forrajeria';
+
     const token = jwt.sign(
       { id_usuario: usuario.id_usuario, email: usuario.email, rol: usuario.rol },
-      process.env.JWT_SECRET || 'tu_clave_secreta_aqui',
+      secretKey,
       { expiresIn: '8h' }
     );
 
@@ -46,24 +48,15 @@ export const AuthService = {
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-
     const idGenerado = crypto.randomUUID();
 
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        id_usuario: idGenerado,
-        email,
-        password: passwordHash,
-        rol: rol || 'Empleado',
-        activo: true
-      }
-    });
+    const { rows } = await pool.query(
+      `INSERT INTO usuarios (id_usuario, email, password, rol, activo) 
+       VALUES ($1, $2, $3, $4, true) 
+       RETURNING id_usuario, email, rol, activo`,
+      [idGenerado, email, passwordHash, rol || 'Empleado']
+    );
 
-    return {
-      id_usuario: nuevoUsuario.id_usuario,
-      email: nuevoUsuario.email,
-      rol: nuevoUsuario.rol,
-      activo: nuevoUsuario.activo
-    };
+    return rows[0];
   }
 };

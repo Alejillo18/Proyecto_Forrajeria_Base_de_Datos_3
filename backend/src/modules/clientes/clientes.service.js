@@ -52,8 +52,8 @@ export const ClientesService = {
     return nuevoCliente;
   },
 
-  async update(id, data) {
-    const clienteActualizado = await ClientesDAO.update(id, data);
+  async update(id, datosParaActualizar) {
+    const clienteActualizado = await ClientesDAO.update(id, datosParaActualizar);
     if (clienteActualizado) {
       await clearClientesCache();
     }

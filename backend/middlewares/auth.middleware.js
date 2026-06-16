@@ -9,13 +9,15 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secretKey = process.env.JWT_SECRET || 'clave_secreta_de_emergencia_forrajeria';
+    const decoded = jwt.verify(token, secretKey);
     req.user = decoded;
     next();
   } catch (error) {
     return res.status(403).json({ message: 'Token inválido o expirado.' });
   }
 };
+
 export const checkRole = (rolesPermitidos) => {
   return (req, res, next) => {
     if (!req.user || !rolesPermitidos.includes(req.user.rol)) {

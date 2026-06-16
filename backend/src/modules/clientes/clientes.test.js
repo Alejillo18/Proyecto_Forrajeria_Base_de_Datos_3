@@ -129,9 +129,7 @@ describe('Módulo de Clientes - Pruebas Unitarias (Servicio)', () => {
     assert.strictEqual(cacheInvalidada, true);
   });
 
-  // --- Pruebas de Cuenta Corriente (HU-13) ---
-
-  test('obtenerDetalleCuentaCorriente() - Debería consolidar metadatos, saldo deudor y parsear BigInt a String', async () => {
+  test('obtenerDetalleCuentaCorriente() - Debería integrar metadatos, saldo deudor y parsear BigInt a String', async () => {
     ClientesDAO.selectById = async () => fakeCliente;
     ClientesDAO.obtenerSaldoDeudor = async () => 45000;
     ClientesDAO.selectHistorialCuentaCorriente = async () => fakeHistorialCC;
@@ -140,7 +138,7 @@ describe('Módulo de Clientes - Pruebas Unitarias (Servicio)', () => {
 
     assert.strictEqual(resultado.id_cliente, '00000000-0000-0000-0000-000000000001');
     assert.strictEqual(typeof resultado.dni_cuit, 'string');
-    assert.strictEqual(resultado.dni_cuit, '20456789123'); // Valida casteo del BigInt preventivo
+    assert.strictEqual(resultado.dni_cuit, '20456789123');
     assert.strictEqual(resultado.saldo_deudor, 45000);
     assert.strictEqual(resultado.historial.length, 1);
     assert.strictEqual(resultado.historial[0].id_venta, 'v-001');
