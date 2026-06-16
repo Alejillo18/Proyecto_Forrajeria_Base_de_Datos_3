@@ -1,31 +1,28 @@
-import { prisma } from '../../../config/db.prisma.js';
+import { pool } from '../../../config/db.pg.js';
 
 export const VentasDAO = {
   async insertarVentaTransaccional({ id_usuario, id_cliente, monto_total, metodo_pago, detalles }) {
-    return await prisma.$transaction(async (tx) => {
-      const nuevaVenta = await tx.venta.create({
-        data: {
-          id_usuario,
-          id_cliente: id_cliente || null,
-          monto_total,
-          metodo_pago,
-        },
-        select: {
-          id_venta: true,
-          fecha: true,
-        },
-      });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-      const deventaData = detalles.map((item) => ({
-        id_venta: nuevaVenta.id_venta,
-        id_producto: item.id_producto,
-        cantidad: item.cantidad,
-        precio_unitario_historico: item.precio_unitario_historico,
-      }));
+      const { rows: ventaRows } = await client.query(
+        `INSERT INTO ventas (id_usuario, id_cliente, total, metodo_pago)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id_venta, fecha`,
+        [id_usuario, id_cliente || null, monto_total, metodo_pago]
+      );
+      const nuevaVenta = ventaRows[0];
 
-      await tx.detalleVenta.createMany({
-        data: deventaData,
-      });
+      for (const item of detalles) {
+        await client.query(
+          `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario_historico)
+           VALUES ($1, $2, $3, $4)`,
+          [nuevaVenta.id_venta, item.id_producto, item.cantidad, item.precio_unitario_historico]
+        );
+      }
+
+      await client.query('COMMIT');
 
       return {
         id_venta: nuevaVenta.id_venta,
@@ -33,41 +30,39 @@ export const VentasDAO = {
         monto_total,
         metodo_pago,
       };
-    });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 
   async selectPendientesComisionByDistribuidor(id_usuario) {
-    return await prisma.venta.findMany({
-      where: {
-        id_usuario,
-        comision_liquidada: false,
-        envio: {
-          estado: 'Entregado'
-        }
-      },
-      select: {
-        id_venta: true,
-        fecha: true,
-        monto_total: true,
-      },
-      orderBy: {
-        fecha: 'asc'
-      }
-    });
+    const { rows } = await pool.query(
+      `SELECT v.id_venta, v.fecha, v.total AS monto_total
+       FROM ventas v
+       JOIN envios e ON e.id_venta = v.id_venta
+       WHERE v.id_usuario = $1
+         AND v.comision_liquidada = false
+         AND e.estado = 'Entregado'
+       ORDER BY v.fecha ASC`,
+      [id_usuario]
+    );
+    return rows;
   },
 
   async updateComisionesALiquidadas(id_usuario) {
-    return await prisma.venta.updateMany({
-      where: {
-        id_usuario,
-        comision_liquidada: false,
-        envio: {
-          estado: 'Entregado'
-        }
-      },
-      data: {
-        comision_liquidada: true
-      }
-    });
-  }
+    const { rowCount } = await pool.query(
+      `UPDATE ventas v
+       SET comision_liquidada = true
+       FROM envios e
+       WHERE e.id_venta = v.id_venta
+         AND v.id_usuario = $1
+         AND v.comision_liquidada = false
+         AND e.estado = 'Entregado'`,
+      [id_usuario]
+    );
+    return { count: rowCount };
+  },
 };

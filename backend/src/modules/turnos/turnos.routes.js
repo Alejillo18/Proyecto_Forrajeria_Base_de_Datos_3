@@ -4,9 +4,9 @@ import { verifyToken, checkRole } from '../../../middlewares/auth.middleware.js'
 
 const router = Router();
 
-router.get('/activo', verifyToken, TurnosController.getActivo);
-router.post('/apertura', verifyToken, TurnosController.abrirTurno);
-router.post('/:id/cierre', verifyToken, TurnosController.cerrarTurno);
-router.get('/', verifyToken, checkRole(['Administrador']), TurnosController.getAll);
+router.get('/activo', verifyToken, TurnosController.verificarActivo);
+router.post('/apertura', verifyToken, TurnosController.abrir);
+router.post('/:id/cierre', verifyToken, TurnosController.cerrar);
+router.get('/', verifyToken, checkRole(['Administrador']), TurnosController.listarTodos);
 
 export default router;

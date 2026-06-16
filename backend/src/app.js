@@ -8,6 +8,9 @@ import TurnosRouter from "./modules/turnos/turnos.routes.js";
 import VentasRouter from "./modules/ventas/ventas.router.js";
 import AuthRouter from './modules/auth/auth.routes.js';
 import ReportesRouter from "./modules/reportes/reportes.routes.js";
+import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
+import vendedoresRoutes from './modules/vendedores/vendedores.routes.js';
+import { errorHandler } from '../middlewares/error.middleware.js';
 
 const app = express();
 
@@ -30,6 +33,8 @@ app.use('/api/productos', ProductosRouter);
 app.use('/api/turnos', TurnosRouter);
 app.use('/api/ventas', VentasRouter);
 app.use('/api/reportes', ReportesRouter);
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/vendedores', vendedoresRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({
@@ -49,5 +54,6 @@ app.use((err, req, res, next) => {
     }
   });
 });
+app.use(errorHandler);
 
 export default app;

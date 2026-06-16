@@ -1,30 +1,45 @@
-import { inject, PLATFORM_ID } from '@angular/core';
+import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
-import { AuthService } from '../services/auth';
 
-export const roleGuard: CanActivateFn = (route, state) => {
-  const platformId = inject(PLATFORM_ID);
-  const router = inject(Router);
+export const roleGuard = (rolesPermitidos: string[]): CanActivateFn => {
+  return (route, state) => {
+    const router = inject(Router);
+    
+    let usuarioStr = null;
+    if (typeof window !== 'undefined') {
+      usuarioStr = localStorage.getItem('usuario');
+    }
 
-  if (!isPlatformBrowser(platformId)) {
-    return true;
-  }
+    if (!usuarioStr) {
+      console.log('🔴 GUARD: No se encontró ningún usuario en localStorage. Rebotando a /login.');
+      router.navigate(['/login']);
+      return false;
+    }
 
-  const authService = inject(AuthService);
+    const usuario = JSON.parse(usuarioStr);
+    
+    // Normalizamos el rol a formato Título (ej: "Administrador") para evitar errores de tipeo
+    const rolCrudo = usuario?.rol || usuario?.role || '';
+    const rolUsuario = rolCrudo.charAt(0).toUpperCase() + rolCrudo.slice(1).toLowerCase();
 
-  if (!authService.isLoggedIn()) {
-    router.navigate(['/login']);
+    console.log('--- CHEQUEO DE SEGURIDAD DEL GUARD ---');
+    console.log('Objeto usuario recuperado:', usuario);
+    console.log('Rol detectado y procesado:', rolUsuario);
+    console.log('Roles permitidos para esta pantalla:', rolesPermitidos);
+    console.log('--------------------------------------');
+
+    if (rolesPermitidos.map(r => r.toLowerCase()).includes(rolUsuario.toLowerCase())) {
+      console.log('🟢 GUARD: Acceso permitido.');
+      return true;
+    }
+
+    console.log('❌ GUARD: Rol no autorizado para esta URL. Redireccionando por defecto.');
+    if (rolUsuario === 'Empleado') {
+      router.navigate(['/ventas']);
+    } else {
+      router.navigate(['/login']);
+    }
+    
     return false;
-  }
-
-  const rolesPermitidos = route.data['roles'] as Array<string>;
-  const userRol = authService.getRol();
-
-  if (!rolesPermitidos || rolesPermitidos.includes(userRol || '')) {
-    return true;
-  }
-
-  router.navigate(['/']);
-  return false;
+  };
 };
