@@ -6,7 +6,7 @@
     </div>
 
     <nav class="space-y-1" *ngIf="checkLoginStatus()">
-      <a *ngFor="let link of filteredLinks" 
+      <a *ngFor="let link of navLinks" 
          [routerLink]="link.route" 
          routerLinkActive="bg-slate-900 text-emerald-400 border-emerald-500"
          [routerLinkActiveOptions]="{ exact: true }"

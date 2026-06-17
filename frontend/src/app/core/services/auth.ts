@@ -1,43 +1,55 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { delay, tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:8080/api/auth';
+
+  private readonly TOKEN_KEY = 'jwt_token';
+  private readonly ROLE_KEY = 'user_role';
 
   login(credentials: any): Observable<any> {
-    return this.http.post<any>(`${this.API_URL}/login`, credentials).pipe(
+    const { email, password } = credentials;
+
+    if (email !== 'admin@test.com' && email !== 'operario@forrajería.com') {
+      return throwError(() => ({
+        error: { message: 'El usuario no está registrado en el sistema.' }
+      })).pipe(delay(1000));
+    }
+
+    if (password !== '123456') {
+      return throwError(() => ({
+        error: { message: 'Contraseña incorrecta. Intente nuevamente.' }
+      })).pipe(delay(1000));
+    }
+    const mockResponse = {
+      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mockTokenForrajeríaElTrebol2026',
+      user: {
+        email: email,
+        nombre: 'Alejo Oviedo',
+        rol: 'Administrador'
+      }
+    };
+
+
+    return of(mockResponse).pipe(
+      delay(1000),
       tap(res => {
-        if (res && res.token) {
-          localStorage.setItem('token', res.token);
-          if (res.usuario) {
-            localStorage.setItem('usuario', JSON.stringify(res.usuario));
-          }
-        }
+
+        localStorage.setItem(this.TOKEN_KEY, res.token);
+        localStorage.setItem(this.ROLE_KEY, res.user.rol);
       })
     );
   }
 
-  registrar(usuarioData: any): Observable<any> {
-    return this.http.post<any>(`${this.API_URL}/registro`, usuarioData);
-  }
-
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem(this.TOKEN_KEY);
   }
 
   getRol(): string | null {
-    const usuarioStr = localStorage.getItem('usuario');
-    if (usuarioStr) {
-      const usuario = JSON.parse(usuarioStr);
-      return usuario?.rol || null;
-    }
-    return null;
+    return localStorage.getItem(this.ROLE_KEY);
   }
 
   isLoggedIn(): boolean {
@@ -45,7 +57,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.ROLE_KEY);
   }
 }
