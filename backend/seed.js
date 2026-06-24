@@ -43,6 +43,11 @@ const CLIENTES = [
   { nombre_cliente: "Tambo La Esperanza", dni_cuit: 30456789012, telefono: "3546667788", direccion: "Ruta 5 km 12", email: "esperanza@tambo.com" },
 ];
 
+const REPARTIDORES = [
+  { nombre_repartidor: "Miguel Ángel", activo: true },
+  { nombre_repartidor: "Lucas Pérez", activo: true }
+];
+
 const METODOS_PAGO = ["Efectivo", "Transferencia", "Cuenta Corriente"];
 
 async function main() {
@@ -113,7 +118,24 @@ async function main() {
       clientesIds.push(...rows.map(r => r.id_cliente));
     }
 
-    console.log("[PG] Sembrando historial de ventas generales transaccionales...");
+    console.log("[PG] Sembrando repartidores...");
+    const repartidoresIds = [];
+    for (const r of REPARTIDORES) {
+      const { rows } = await client.query(`
+        INSERT INTO repartidores (nombre_repartidor, activo)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING
+        RETURNING id_repartidor;
+      `, [r.nombre_repartidor, r.activo]);
+      if (rows[0]) repartidoresIds.push(rows[0].id_repartidor);
+    }
+
+    if (repartidoresIds.length === 0) {
+      const { rows } = await client.query(`SELECT id_repartidor FROM repartidores`);
+      repartidoresIds.push(...rows.map(r => r.id_repartidor));
+    }
+
+    console.log("[PG] Sembrando historial de ventas generales y envios transaccionales...");
     const todosVendedoresIds = ["00000000-0000-0000-0000-000000000000", ...vendedoresIds];
     const todosClientesIds = ["00000000-0000-0000-0000-000000000000", ...clientesIds];
 
@@ -127,10 +149,24 @@ async function main() {
         const total = randomEntre(4000, 35000);
         const fecha = diasAtras(dia);
 
-        await client.query(`
-          INSERT INTO ventas (id_vendedor, id_cliente, total, metodo_pago, fecha)
-          VALUES ($1, $2, $3, $4, $5);
-        `, [id_vendedor, id_cliente, total, metodo_pago, fecha]).catch(() => {});
+        try {
+          const { rows } = await client.query(`
+            INSERT INTO ventas (id_vendedor, id_cliente, total, metodo_pago, fecha)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id_venta;
+          `, [id_vendedor, id_cliente, total, metodo_pago, fecha]);
+
+          if (rows[0] && Math.random() > 0.5 && repartidoresIds.length > 0) {
+            const id_venta = rows[0].id_venta;
+            const id_repartidor = elegir(repartidoresIds);
+            await client.query(`
+              INSERT INTO envios (direccion_entrega, estado, fecha_envio, id_venta, id_repartidor, comision_liquidada)
+              VALUES ($1, $2, $3, $4, $5, $6);
+            `, ["Direccion generica " + randomEntre(100, 999), 'Entregado', fecha, id_venta, id_repartidor, false]);
+          }
+        } catch (err) {
+          console.error("Error al insertar venta/envio en PG:", err.message);
+        }
       }
     }
 

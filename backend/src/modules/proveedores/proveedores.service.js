@@ -5,9 +5,7 @@ async function clearProveedoresCache() {
   try {
     const keys = await redisClient.keys('proveedores:*');
     if (keys.length > 0) await redisClient.del(keys);
-  } catch (error) {
-    console.error('Error al limpiar caché de proveedores:', error.message);
-  }
+  } catch (error) {}
 }
 
 export const ProveedoresService = {
@@ -15,7 +13,6 @@ export const ProveedoresService = {
     const offset = (page - 1) * limit;
     const cacheKey = `proveedores:page:${page}:limit:${limit}`;
 
-  
     try {
       const cachedData = await redisClient.get(cacheKey);
       if (cachedData) {
@@ -23,10 +20,7 @@ export const ProveedoresService = {
         data.origen = 'Redis';
         return data;
       }
-    } catch (err) {
-      console.error('Redis Error (Fallback activado):', err.message);
-    }
-
+    } catch (err) {}
 
     const dbRows = await ProveedoresDAO.selectAll({ limit, offset });
     
@@ -39,15 +33,30 @@ export const ProveedoresService = {
 
     try {
       await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 120 });
-    } catch (err) {
-      console.error('Error al guardar en Redis:', err.message);
-    }
+    } catch (err) {}
 
     return responseData;
   },
 
   async getById(id) {
-    return await ProveedoresDAO.selectById(id);
+    const cacheKey = `proveedores:id:${id}`;
+
+    try {
+      const cachedData = await redisClient.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+    } catch (err) {}
+
+    const proveedor = await ProveedoresDAO.selectById(id);
+
+    if (proveedor) {
+      try {
+        await redisClient.set(cacheKey, JSON.stringify(proveedor), { EX: 3600 });
+      } catch (err) {}
+    }
+
+    return proveedor;
   },
 
   async create(data) {
@@ -68,4 +77,3 @@ export const ProveedoresService = {
     return proveedorEliminado;
   }
 };
-

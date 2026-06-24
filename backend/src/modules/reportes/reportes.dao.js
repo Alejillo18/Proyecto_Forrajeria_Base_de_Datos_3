@@ -80,24 +80,40 @@ export const ReportesDAO = {
 
   async obtenerComisionesDistribuidoresResumen() {
     const { rows } = await pool.query(
-      `SELECT v.id_usuario,
-              COUNT(v.id_venta) AS entregas_pendientes_pago,
+      `SELECT e.id_repartidor,
+              COALESCE(r.nombre_repartidor, 'Desconocido') AS nombre_repartidor,
+              COUNT(e.id_envio) AS entregas_pendientes_pago,
               COALESCE(SUM(v.total), 0) AS total_distribuido
-       FROM ventas v
-       JOIN envios e ON e.id_venta = v.id_venta
-       WHERE v.comision_liquidada = false
+       FROM envios e
+       JOIN ventas v ON e.id_venta = v.id_venta
+       LEFT JOIN repartidores r ON r.id_repartidor = e.id_repartidor
+       WHERE e.comision_liquidada = false
          AND e.estado = 'Entregado'
-       GROUP BY v.id_usuario
+       GROUP BY e.id_repartidor, r.nombre_repartidor
        ORDER BY total_distribuido DESC`
     );
     return rows.map(r => {
       const totalAcumulado = Number(r.total_distribuido);
       return {
-        id_usuario: r.id_usuario,
+        id_repartidor: r.id_repartidor,
+        nombre: r.nombre_repartidor,
         entregas_pendientes_pago: Number(r.entregas_pendientes_pago),
         total_distribuido: totalAcumulado,
         comision_pendiente: Math.round(totalAcumulado * 0.10 * 100) / 100,
       };
     });
   },
+
+  async obtenerVentasUltimos7Dias() {
+    const { rows } = await pool.query(
+      `SELECT
+          gs.fecha::date AS fecha_dia,
+          COALESCE(SUM(v.total), 0) AS total_dia
+       FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day') AS gs(fecha)
+       LEFT JOIN ventas v ON v.fecha = gs.fecha::date
+       GROUP BY gs.fecha
+       ORDER BY gs.fecha ASC`
+    );
+    return rows.map(r => Number(r.total_dia));
+  }
 };

@@ -3,25 +3,19 @@ import { Producto } from '../productos/productos.model.js';
 
 export const ReportesService = {
   async obtenerDashboardCompleto() {
-    const [
-      metricasFinancieras,
-      topVendedores,
-      deudoresCriticos,
-      comisionesDistribuidores,
-      productosCriticos
-    ] = await Promise.all([
-      ReportesDAO.obtenerMetricasFinancieras(),
-      ReportesDAO.obtenerTopVendedores(),
-      ReportesDAO.obtenerDeudoresCriticos(),
-      ReportesDAO.obtenerComisionesDistribuidoresResumen(),
-      Producto.find({
-        activo: true,
-        $or: [
-          { stock_bolsas_cerradas: { $lte: 3 } },
-          { stock_kilos_granel: { $eq: 0 } }
-        ]
-      }).select('sku nombre_producto stock_bolsas_cerradas stock_kilos_granel')
-    ]);
+    const metricasFinancieras = await ReportesDAO.obtenerMetricasFinancieras();
+    const topVendedores = await ReportesDAO.obtenerTopVendedores();
+    const deudoresCriticos = await ReportesDAO.obtenerDeudoresCriticos();
+    const comisionesDistribuidores = await ReportesDAO.obtenerComisionesDistribuidoresResumen();
+    const ventasDiarias = await ReportesDAO.obtenerVentasUltimos7Dias();
+    
+    const productosCriticos = await Producto.find({
+      activo: true,
+      $or: [
+        { stock_bolsas_cerradas: { $lte: 3 } },
+        { stock_kilos_granel: { $eq: 0 } }
+      ]
+    }).select('sku nombre_producto stock_bolsas_cerradas stock_kilos_granel');
 
     return {
       financiero: metricasFinancieras,
@@ -41,7 +35,8 @@ export const ReportesService = {
         bolsas: p.stock_bolsas_cerradas,
         kilos_granel: p.stock_kilos_granel,
         estado: p.stock_bolsas_cerradas <= 1 ? 'CRÍTICO' : 'REABASTECER'
-      }))
+      })),
+      ventasDiarias: ventasDiarias
     };
   }
 };

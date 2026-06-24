@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 
-interface ProductoForrajería {
-  id: number;
+interface ProductoForrajeria {
+  id: string;
+  sku: string;
   nombre: string;
   categoria: string;
   stockBolsas: number;
@@ -21,16 +23,18 @@ interface ProductoForrajería {
 })
 export class CatalogoComponent implements OnInit {
   
-  public productos: ProductoForrajería[] = [];
+  private http = inject(HttpClient);
+
+  public productos: ProductoForrajeria[] = [];
 
   public mostrarModalFraccionar = false;
   public mostrarModalCargarStock = false;
   public mostrarModalNuevoProducto = false;
 
-  public productoSeleccionado: ProductoForrajería | null = null;
+  public productoSeleccionado: ProductoForrajeria | null = null;
   public cantidadBolsasAFraccionar = 1;
 
-  public idProductoACargar: number | null = null;
+  public idProductoACargar: string | null = null;
   public cantidadBolsasACargar = 1;
 
   public nuevoProducto = {
@@ -41,13 +45,36 @@ export class CatalogoComponent implements OnInit {
     stockMinimoBolsas: 2
   };
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.cargarProductos();
+  }
 
-  public get productosCriticos(): ProductoForrajería[] {
+  public cargarProductos(): void {
+    this.http.get('http://localhost:8080/api/productos').subscribe({
+      next: (res: any) => {
+        const data = res.datos || [];
+        this.productos = data.map((p: any) => ({
+          id: p._id,
+          sku: p.sku,
+          nombre: p.nombre_producto,
+          categoria: 'General',
+          stockBolsas: p.stock_bolsas_cerradas || 0,
+          pesoPorBolsaKg: p.peso_bolsa_kg || 0,
+          stockKilosSueltos: p.stock_kilos_granel || 0,
+          stockMinimoBolsas: p.stock_minimo || 0
+        }));
+      },
+      error: () => {
+        alert('Ocurrió un error al intentar cargar el inventario desde la base de datos.');
+      }
+    });
+  }
+
+  public get productosCriticos(): ProductoForrajeria[] {
     return this.productos.filter(p => p.stockBolsas <= p.stockMinimoBolsas);
   }
 
-  public abrirModalFraccionamiento(producto: ProductoForrajería): void {
+  public abrirModalFraccionamiento(producto: ProductoForrajeria): void {
     if (producto.stockBolsas <= 0) {
       alert('No hay bolsas disponibles para fraccionar de este producto.');
       return;
@@ -95,15 +122,24 @@ export class CatalogoComponent implements OnInit {
       return;
     }
 
-    const productoTarget = this.productos.find(p => p.id === this.productoSeleccionado!.id);
-    if (productoTarget) {
-      const kilosASumar = this.cantidadBolsasAFraccionar * productoTarget.pesoPorBolsaKg;
-      productoTarget.stockBolsas -= this.cantidadBolsasAFraccionar;
-      productoTarget.stockKilosSueltos += kilosASumar;
-      alert(`Fraccionamiento exitoso: Se descontaron ${this.cantidadBolsasAFraccionar} bolsas y se sumaron ${kilosASumar} kg al stock suelto.`);
-    }
+    const productoTarget = this.productoSeleccionado;
+    const kilosASumar = this.cantidadBolsasAFraccionar * productoTarget.pesoPorBolsaKg;
+    
+    const payload = {
+      stock_bolsas_cerradas: productoTarget.stockBolsas - this.cantidadBolsasAFraccionar,
+      stock_kilos_granel: productoTarget.stockKilosSueltos + kilosASumar
+    };
 
-    this.cerrarModales();
+    this.http.put(`http://localhost:8080/api/productos/${productoTarget.id}`, payload).subscribe({
+      next: () => {
+        alert(`Fraccionamiento exitoso: Se descontaron ${this.cantidadBolsasAFraccionar} bolsas y se sumaron ${kilosASumar} kg al stock suelto.`);
+        this.cargarProductos();
+        this.cerrarModales();
+      },
+      error: () => {
+        alert('Hubo un error al intentar fraccionar el producto en la base de datos.');
+      }
+    });
   }
 
   public ejecutarCargaStock(): void {
@@ -117,13 +153,24 @@ export class CatalogoComponent implements OnInit {
       return;
     }
 
-    const productoTarget = this.productos.find(p => p.id === Number(this.idProductoACargar));
+    const productoTarget = this.productos.find(p => p.id === this.idProductoACargar);
+    
     if (productoTarget) {
-      productoTarget.stockBolsas += this.cantidadBolsasACargar;
-      alert(`Stock actualizado: Se sumaron ${this.cantidadBolsasACargar} bolsas a "${productoTarget.nombre}".`);
-    }
+      const payload = {
+        stock_bolsas_cerradas: productoTarget.stockBolsas + this.cantidadBolsasACargar
+      };
 
-    this.cerrarModales();
+      this.http.put(`http://localhost:8080/api/productos/${productoTarget.id}`, payload).subscribe({
+        next: () => {
+          alert(`Stock actualizado: Se sumaron ${this.cantidadBolsasACargar} bolsas a "${productoTarget.nombre}".`);
+          this.cargarProductos();
+          this.cerrarModales();
+        },
+        error: () => {
+          alert('Hubo un error al intentar ingresar el stock en la base de datos.');
+        }
+      });
+    }
   }
 
   public ejecutarCrearProducto(): void {
@@ -137,20 +184,25 @@ export class CatalogoComponent implements OnInit {
       return;
     }
 
-    const nuevoId = this.productos.length > 0 ? Math.max(...this.productos.map(p => p.id)) + 1 : 1;
-
-    const productoCreado: ProductoForrajería = {
-      id: nuevoId,
-      nombre: this.nuevoProducto.nombre,
-      categoria: this.nuevoProducto.categoria,
-      stockBolsas: this.nuevoProducto.stockBolsas,
-      pesoPorBolsaKg: this.nuevoProducto.pesoPorBolsaKg,
-      stockKilosSueltos: 0,
-      stockMinimoBolsas: this.nuevoProducto.stockMinimoBolsas
+    const payload = {
+      sku: 'CAT-' + Math.floor(Math.random() * 90000 + 10000).toString(),
+      nombre_producto: this.nuevoProducto.nombre,
+      peso_bolsa_kg: this.nuevoProducto.pesoPorBolsaKg,
+      stock_bolsas_cerradas: this.nuevoProducto.stockBolsas,
+      stock_kilos_granel: 0,
+      stock_minimo: this.nuevoProducto.stockMinimoBolsas
     };
 
-    this.productos.push(productoCreado);
-    alert(`Producto "${productoCreado.nombre}" creado exitosamente en el catálogo.`);
-    this.cerrarModales();
+    this.http.post('http://localhost:8080/api/productos', payload).subscribe({
+      next: () => {
+        alert(`Producto "${this.nuevoProducto.nombre}" creado exitosamente en el catálogo.`);
+        this.cargarProductos();
+        this.cerrarModales();
+      },
+      error: (err: any) => {
+        const msj = err.error?.message || 'Error al conectar con la base de datos.';
+        alert(`No se pudo crear el producto: ${msj}`);
+      }
+    });
   }
 }

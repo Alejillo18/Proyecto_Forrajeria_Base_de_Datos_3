@@ -75,13 +75,28 @@ export class DashboardComponent implements OnInit {
   }
 
   private cargarDatosDashboard(): void {
-    this.http.get('http://localhost:3000/api/reportes/dashboard').subscribe({
+    this.http.get('http://localhost:8080/api/reportes/dashboard').subscribe({
       next: (data: any) => {
-        this.totalVentasMes = data.totalVentasMes || 0;
-        this.totalFiadoAcumulado = data.totalFiadoAcumulado || 0;
-        this.productosBajoStock = data.productosBajoStock || 0;
-        this.stockCritico = data.stockCritico || [];
-        this.deudoresRecientes = data.deudoresRecientes || [];
+        this.totalVentasMes = data.financiero?.facturacion_mes || 0;
+        
+        const deudores = data.riesgo_credito?.deudores || [];
+        this.totalFiadoAcumulado = deudores.reduce((sum: number, d: any) => sum + d.saldo_deudor, 0);
+        
+        this.deudoresRecientes = deudores.map((d: any) => ({
+          cliente: d.nombre_cliente,
+          telefono: d.telefono || 'N/A',
+          ultimaCompra: 'N/A',
+          saldoDebe: d.saldo_deudor
+        }));
+
+        const stock = data.alertas_stock || [];
+        this.productosBajoStock = stock.length;
+        this.stockCritico = stock.map((s: any) => ({
+          producto: s.nombre,
+          stockMinimo: 3,
+          unidad: 'Bolsas',
+          stockActual: s.bolsas
+        }));
 
         if (data.ventasDiarias && data.ventasDiarias.length > 0) {
           this.chartOptions.series = [{

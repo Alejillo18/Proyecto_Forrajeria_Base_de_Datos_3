@@ -37,8 +37,8 @@
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="border-b border-slate-800 bg-slate-900/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <th class="p-4">SKU</th>
           <th class="p-4">Producto</th>
-          <th class="p-4">Categoría</th>
           <th class="p-4 text-center">Bolsas Cerradas</th>
           <th class="p-4 text-center">Peso Bolsa</th>
           <th class="p-4 text-center">Stock Suelto (Kilos)</th>
@@ -47,8 +47,8 @@
       </thead>
       <tbody class="divide-y divide-slate-800 text-sm text-slate-300">
         <tr *ngFor="let prod of productos" class="hover:bg-slate-800/30 transition-colors">
+          <td class="p-4 font-mono text-xs text-slate-400">{{ prod.sku }}</td>
           <td class="p-4 font-medium text-white">{{ prod.nombre }}</td>
-          <td class="p-4"><span class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">{{ prod.categoria }}</span></td>
           <td class="p-4 text-center">
             <span [ngClass]="{'text-rose-400 font-bold': prod.stockBolsas <= prod.stockMinimoBolsas, 'text-emerald-400': prod.stockBolsas > prod.stockMinimoBolsas}">
               {{ prod.stockBolsas }} u.
@@ -131,7 +131,6 @@
 
   <div *ngIf="mostrarModalNuevoProducto" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
     <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-      
       <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
         <h3 class="text-lg font-bold text-white">Alta de Nuevo Producto</h3>
         <button (click)="cerrarModales()" class="text-slate-400 hover:text-white transition-colors cursor-pointer text-xl">&times;</button>
@@ -178,7 +177,6 @@
         <button (click)="cerrarModales()" class="flex-1 px-4 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer">Cancelar</button>
         <button (click)="ejecutarCrearProducto()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer">Crear Producto</button>
       </div>
-
     </div>
   </div>
 

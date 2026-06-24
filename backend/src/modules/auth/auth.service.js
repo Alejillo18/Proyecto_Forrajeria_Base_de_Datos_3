@@ -3,10 +3,29 @@ import { pool } from '../../../config/db.pg.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { redisClient } from '../../../config/db.redis.js';
 
 export const AuthService = {
   async login({ email, password }) {
-    const usuario = await AuthDAO.selectByEmail(email);
+    const cacheKey = `usuario:email:${email}`;
+    let usuario = null;
+
+    try {
+      const cachedData = await redisClient.get(cacheKey);
+      if (cachedData) {
+        usuario = JSON.parse(cachedData);
+      }
+    } catch (err) {}
+
+    if (!usuario) {
+      usuario = await AuthDAO.selectByEmail(email);
+      if (usuario) {
+        try {
+          await redisClient.set(cacheKey, JSON.stringify(usuario), { EX: 3600 });
+        } catch (err) {}
+      }
+    }
+
     if (!usuario || !usuario.activo) {
       const error = new Error('Credenciales incorrectas o usuario inactivo');
       error.status = 401;
